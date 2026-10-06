@@ -1,0 +1,63 @@
+name: Publish Maven Repository
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: java-libs-publish
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Build Maven artifacts
+        run: ./gradlew publish
+        env:
+          VERSION: ${{ github.ref_name }}
+
+      - name: Checkout Maven repository
+        uses: actions/checkout@v4
+        with:
+          repository: aVor42/java-libs
+          ref: gh-pages
+          path: java-libs
+          token: ${{ secrets.JAVA_LIBS_TOKEN }}
+
+      - name: Copy artifacts
+        run: |
+          cp -R build/repo/. java-libs/
+
+      - name: Commit and push Maven repository
+        working-directory: java-libs
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add .
+
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+            exit 0
+          fi
+
+          git commit -m "Publish ${GITHUB_REPOSITORY} ${GITHUB_REF_NAME}"
+          git push origin gh-pages
