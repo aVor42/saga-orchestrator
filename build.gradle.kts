@@ -46,7 +46,8 @@ dependencies {
     compileOnly("org.projectlombok:lombok:1.18.42")
     annotationProcessor("org.projectlombok:lombok:1.18.42")
 
-    api("org.springframework:spring-tx:6.2.11")
-    api("org.apache.kafka:kafka-clients:3.9.1")
+    implementation("org.slf4j:slf4j-api:2.0.17")
+    // api("org.springframework:spring-tx:6.2.11")
+    // api("org.apache.kafka:kafka-clients:3.9.1")
 
 }

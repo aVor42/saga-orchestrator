@@ -2,6 +2,10 @@ package com.github.avor42.saga.orchestrator;
 
 import java.util.List;
 
+/**
+ * @author Voronkov A
+ * @since 10.10.2026
+ */
 public abstract class ListStepMachine<S> implements StepMachine<S> {
 
     @Override
