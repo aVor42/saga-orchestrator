@@ -1,4 +1,4 @@
-package com.github.avor42.saga.orchestrator;
+package com.github.avor42.saga.orchestrator.machine;
 
 import java.util.List;
 

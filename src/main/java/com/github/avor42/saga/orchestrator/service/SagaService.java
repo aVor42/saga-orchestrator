@@ -1,7 +1,5 @@
 package com.github.avor42.saga.orchestrator.service;
 
-import java.util.UUID;
-
 import com.github.avor42.saga.orchestrator.model.enums.SagaStatus;
 
 /**
@@ -10,10 +8,12 @@ import com.github.avor42.saga.orchestrator.model.enums.SagaStatus;
  */
 public interface SagaService<E, S> {
 
-    E setStepAndStatus(UUID uuid, S step, SagaStatus status);
+    E setStepAndStatus(E saga, S step, SagaStatus status);
 
-    E setStep(UUID uuid, S step);
+    E setStep(E saga, S step);
 
-    E setStatus(UUID uuid, SagaStatus status);
+    E setStatus(E saga, SagaStatus status);
+
+    S getStep(E saga);
 
 }

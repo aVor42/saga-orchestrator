@@ -9,8 +9,8 @@ import java.util.UUID;
  * @author Voronkov A
  * @since 10.10.2026
  */
-public record SagaStepReply<S>(
-        UUID sagaUuid,
+public record SagaStepReply<E, S>(
+        E saga,
         S step,
         SagaStepActionType type,
         SagaStepActionStatus status
