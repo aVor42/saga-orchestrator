@@ -10,8 +10,6 @@ public interface SagaService<E, S> {
 
     E setStepAndStatus(E saga, S step, SagaStatus status);
 
-    E setStep(E saga, S step);
-
     E setStatus(E saga, SagaStatus status);
 
     S getStep(E saga);

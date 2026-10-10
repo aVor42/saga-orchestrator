@@ -1,5 +1,7 @@
 package com.github.avor42.saga.orchestrator.engine;
 
+import java.util.Objects;
+import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
 import org.slf4j.Logger;
@@ -26,7 +28,7 @@ public class SagaEngine<E, S> {
 
     private Consumer<E> finalCompensationHandler;
     private Consumer<E> finalExecutionHandler;
-    private Consumer<E> failureCompensationHandler;
+    private BiConsumer<E, S> failureCompensationHandler;
 
     SagaEngine(StepMachine<S> stepMachine, SagaService<E, S> sagaService, SagaStepActionProvidersHolder<E, S> stepActionProvidersHolder) {
         this.stepMachine = stepMachine;
@@ -77,39 +79,56 @@ public class SagaEngine<E, S> {
         this.finalExecutionHandler = handler;
     }
 
-    void setFailureCompensationHandler(Consumer<E> handler) {
+    void setFailureCompensationHandler(BiConsumer<E, S> handler) {
         this.failureCompensationHandler = handler;
     }
 
-    protected void finalCompensate(E saga) {
-        if(finalCompensationHandler != null) {
+    private void finalCompensate(E saga) {
+        if (finalCompensationHandler != null) {
             finalCompensationHandler.accept(saga);
         }
     }
 
-    protected void finalExecute(E saga) {
-        if(finalExecutionHandler != null){
+    private void finalExecute(E saga) {
+        if (finalExecutionHandler != null) {
             finalExecutionHandler.accept(saga);
         }
     }
 
+    private void handleFailureCompensation(E saga, S step) {
+        if (failureCompensationHandler != null) {
+            failureCompensationHandler.accept(saga, step);
+        }
+    }
+
     private void processExecutionReply(SagaStepReply<E, S> sagaStepReply) {
+        E saga = sagaStepReply.saga();
+        S replyStep = sagaStepReply.step();
+        S savedStep = sagaService.getStep(sagaStepReply.saga());
+        if (!Objects.equals(replyStep, savedStep)) {
+            throw new IllegalStateException("Missing consistence. Saga " + saga + " has " + savedStep
+                    + ", but provide for process " + replyStep + " from reply");
+        }
+
         SagaStepActionStatus status = sagaStepReply.status();
         if (SagaStepActionStatus.SUCCESS.equals(status)) {
-            nextStep(sagaStepReply.saga(), sagaStepReply.step());
+            nextStep(saga, replyStep);
         } else if (SagaStepActionStatus.FAILURE.equals(status)) {
-            compensatePreviousStep(sagaStepReply.saga(), sagaStepReply.step());
+            compensatePreviousStep(saga, replyStep);
         } else {
             throw new IllegalStateException("Can't process reply. Unknown action reply status: " + status + " for " + sagaStepReply);
         }
     }
 
     private void processCompensationReply(SagaStepReply<E, S> sagaStepReply) {
+        E saga = sagaStepReply.saga();
+        S step = sagaStepReply.step();
+
         SagaStepActionStatus status = sagaStepReply.status();
         if (SagaStepActionStatus.SUCCESS.equals(status)) {
-            compensatePreviousStep(sagaStepReply.saga(), sagaStepReply.step());
+            compensatePreviousStep(saga, step);
         } else if (SagaStepActionStatus.FAILURE.equals(status)) {
-
+            handleFailureCompensation(saga, step);
         } else {
             throw new IllegalStateException("Can't process reply. Unknown action reply status: " + status + " for " + sagaStepReply);
         }
@@ -130,7 +149,7 @@ public class SagaEngine<E, S> {
         try {
             stepActionProvidersHolder.getActionProvider(step).process(saga);
         } catch (Throwable throwable) {
-            log.error("Error processing saga step {}", step, throwable);
+            log.error("Error processing saga {} step {}", saga, step, throwable);
             compensatePreviousStep(saga, step);
         }
     }
@@ -150,7 +169,7 @@ public class SagaEngine<E, S> {
         try {
             stepActionProvidersHolder.getActionProvider(step).compensate(saga);
         } catch (Throwable throwable) {
-            log.error("Error processing saga step {}", step, throwable);
+            log.error("Error compensate saga saga {} step {}", saga, step, throwable);
             compensatePreviousStep(saga, step);
         }
     }
