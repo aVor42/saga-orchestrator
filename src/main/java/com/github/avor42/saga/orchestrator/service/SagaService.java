@@ -6,12 +6,12 @@ import com.github.avor42.saga.orchestrator.model.enums.SagaStatus;
  * @author Voronkov A
  * @since 10.10.2026
  */
-public interface SagaService<E, S> {
+public interface SagaService<ID, S> {
 
-    E setStepAndStatus(E saga, S step, SagaStatus status);
+    void setStepAndStatus(ID sagaId, S step, SagaStatus status);
 
-    E setStatus(E saga, SagaStatus status);
+    void setStatus(ID sagaId, SagaStatus status);
 
-    S getStep(E saga);
+    S getStep(ID sagaId);
 
 }

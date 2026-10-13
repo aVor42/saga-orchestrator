@@ -6,11 +6,11 @@ package com.github.avor42.saga.orchestrator.engine;
  */
 public class SagaEngineFactory {
 
-    public static <E, S> SagaEngineBuilder<E, S> create() {
+    public static <ID, S> SagaEngineBuilder<ID, S> create() {
         return new SagaEngineBuilder<>();
     }
 
-    public static <E, S> SagaEngineBuilder<E, S> create(Class<E> sagaEntityClass, Class<S> stepClass) {
+    public static <ID, S> SagaEngineBuilder<ID, S> create(Class<ID> sagaIdClass, Class<S> stepClass) {
         return new SagaEngineBuilder<>();
     }
 

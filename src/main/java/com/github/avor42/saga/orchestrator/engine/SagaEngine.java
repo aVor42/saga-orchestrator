@@ -15,39 +15,44 @@ import com.github.avor42.saga.orchestrator.model.enums.SagaStepActionType;
 import com.github.avor42.saga.orchestrator.service.SagaService;
 import com.github.avor42.saga.orchestrator.step.SagaStepActionProvidersHolder;
 
+import lombok.Getter;
+
 /**
  * @author Voronkov A
  * @since 10.10.2026
  */
-public class SagaEngine<E, S> {
+public class SagaEngine<ID, S> {
+
+    @Getter
+    private final String sagaName;
+    private final StepMachine<S> stepMachine;
+    private final SagaService<ID, S> sagaService;
+    private final SagaStepActionProvidersHolder<ID, S> stepActionProvidersHolder;
 
     private final Logger log = LoggerFactory.getLogger(getClass());
-    private final StepMachine<S> stepMachine;
-    private final SagaService<E, S> sagaService;
-    private final SagaStepActionProvidersHolder<E, S> stepActionProvidersHolder;
 
-    private Consumer<E> finalCompensationHandler;
-    private Consumer<E> finalExecutionHandler;
-    private BiConsumer<E, S> failureCompensationHandler;
+    private Consumer<ID> finalCompensationHandler;
+    private Consumer<ID> finalExecutionHandler;
+    private BiConsumer<ID, S> failureCompensationHandler;
 
-    SagaEngine(StepMachine<S> stepMachine, SagaService<E, S> sagaService, SagaStepActionProvidersHolder<E, S> stepActionProvidersHolder) {
+    SagaEngine(String sagaName, StepMachine<S> stepMachine, SagaService<ID, S> sagaService, SagaStepActionProvidersHolder<ID, S> stepActionProvidersHolder) {
+        this.sagaName = sagaName;
         this.stepMachine = stepMachine;
         this.sagaService = sagaService;
         this.stepActionProvidersHolder = stepActionProvidersHolder;
     }
 
-    public E start(E saga) {
-        if (saga == null) {
-            throw new IllegalStateException("Saga must not be null");
+    public void start(ID sagaId) {
+        if (sagaId == null) {
+            throw new IllegalStateException("sagaId must not be null");
         }
 
         S firstStep = stepMachine.getFirstStep();
 
-        processStep(saga, firstStep);
-        return saga;
+        processStep(sagaId, firstStep);
     }
 
-    public void processReply(SagaStepActionReply<E, S> sagaStepActionReply) {
+    public void processReply(SagaStepActionReply<ID, S> sagaStepActionReply) {
         if (sagaStepActionReply == null) {
             throw new IllegalArgumentException("SagaStepActionReply must not be null");
         }
@@ -71,106 +76,106 @@ public class SagaEngine<E, S> {
         }
     }
 
-    void setFinalCompensationHandler(Consumer<E> handler) {
+    void setFinalCompensationHandler(Consumer<ID> handler) {
         this.finalCompensationHandler = handler;
     }
 
-    void setFinalExecutionHandler(Consumer<E> handler) {
+    void setFinalExecutionHandler(Consumer<ID> handler) {
         this.finalExecutionHandler = handler;
     }
 
-    void setFailureCompensationHandler(BiConsumer<E, S> handler) {
+    void setFailureCompensationHandler(BiConsumer<ID, S> handler) {
         this.failureCompensationHandler = handler;
     }
 
-    private void finalCompensate(E saga) {
+    private void finalCompensate(ID sagaId) {
         if (finalCompensationHandler != null) {
-            finalCompensationHandler.accept(saga);
+            finalCompensationHandler.accept(sagaId);
         }
     }
 
-    private void finalExecute(E saga) {
+    private void finalExecute(ID sagaId) {
         if (finalExecutionHandler != null) {
-            finalExecutionHandler.accept(saga);
+            finalExecutionHandler.accept(sagaId);
         }
     }
 
-    private void handleFailureCompensation(E saga, S step) {
+    private void handleFailureCompensation(ID sagaId, S step) {
         if (failureCompensationHandler != null) {
-            failureCompensationHandler.accept(saga, step);
+            failureCompensationHandler.accept(sagaId, step);
         }
     }
 
-    private void processExecutionReply(SagaStepActionReply<E, S> sagaStepActionReply) {
-        E saga = sagaStepActionReply.saga();
+    private void processExecutionReply(SagaStepActionReply<ID, S> sagaStepActionReply) {
+        ID sagaId = sagaStepActionReply.sagaId();
         S replyStep = sagaStepActionReply.step();
-        S savedStep = sagaService.getStep(sagaStepActionReply.saga());
+        S savedStep = sagaService.getStep(sagaStepActionReply.sagaId());
         if (!Objects.equals(replyStep, savedStep)) {
-            throw new IllegalStateException("Missing consistence. Saga " + saga + " has " + savedStep
+            throw new IllegalStateException("Missing consistence. Saga " + sagaId + " has " + savedStep
                     + ", but provide for process " + replyStep + " from reply");
         }
 
         SagaStepActionStatus status = sagaStepActionReply.status();
         if (SagaStepActionStatus.SUCCESS.equals(status)) {
-            nextStep(saga, replyStep);
+            nextStep(sagaId, replyStep);
         } else if (SagaStepActionStatus.FAILURE.equals(status)) {
-            compensatePreviousStep(saga, replyStep);
+            compensatePreviousStep(sagaId, replyStep);
         } else {
             throw new IllegalStateException("Can't process reply. Unknown action reply status: " + status + " for " + sagaStepActionReply);
         }
     }
 
-    private void processCompensationReply(SagaStepActionReply<E, S> sagaStepActionReply) {
-        E saga = sagaStepActionReply.saga();
+    private void processCompensationReply(SagaStepActionReply<ID, S> sagaStepActionReply) {
+        ID sagaId = sagaStepActionReply.sagaId();
         S step = sagaStepActionReply.step();
 
         SagaStepActionStatus status = sagaStepActionReply.status();
         if (SagaStepActionStatus.SUCCESS.equals(status)) {
-            compensatePreviousStep(saga, step);
+            compensatePreviousStep(sagaId, step);
         } else if (SagaStepActionStatus.FAILURE.equals(status)) {
-            handleFailureCompensation(saga, step);
+            handleFailureCompensation(sagaId, step);
         } else {
             throw new IllegalStateException("Can't process reply. Unknown action reply status: " + status + " for " + sagaStepActionReply);
         }
     }
 
-    private void nextStep(E saga, S step) {
+    private void nextStep(ID sagaId, S step) {
         if (stepMachine.isLastStep(step)) {
-            finalExecute(saga);
-            sagaService.setStepAndStatus(saga, step, SagaStatus.COMPLETED);
+            finalExecute(sagaId);
+            sagaService.setStepAndStatus(sagaId, step, SagaStatus.COMPLETED);
         } else {
             S nextStep = stepMachine.getNextStep(step);
-            processStep(saga, nextStep);
+            processStep(sagaId, nextStep);
         }
     }
 
-    private void processStep(E saga, S step) {
-        sagaService.setStepAndStatus(saga, step, SagaStatus.IN_PROGRESS);
+    private void processStep(ID sagaId, S step) {
+        sagaService.setStepAndStatus(sagaId, step, SagaStatus.IN_PROGRESS);
         try {
-            stepActionProvidersHolder.getActionProvider(step).process(saga);
+            stepActionProvidersHolder.getActionProvider(step).process(sagaId, sagaName);
         } catch (Throwable throwable) {
-            log.error("Error processing saga {} step {}", saga, step, throwable);
-            compensatePreviousStep(saga, step);
+            log.error("Error processing saga {} step {}", sagaId, step, throwable);
+            compensatePreviousStep(sagaId, step);
         }
     }
 
-    private void compensatePreviousStep(E saga, S step) {
+    private void compensatePreviousStep(ID sagaId, S step) {
         if (stepMachine.isFirstStep(step)) {
-            finalCompensate(saga);
-            sagaService.setStatus(saga, SagaStatus.FAILED);
+            finalCompensate(sagaId);
+            sagaService.setStatus(sagaId, SagaStatus.FAILED);
             return;
         }
 
         S previousStep = stepMachine.getPreviousStep(step);
-        compensateStep(saga, previousStep);
+        compensateStep(sagaId, previousStep);
     }
 
-    private void compensateStep(E saga, S step) {
+    private void compensateStep(ID sagaId, S step) {
         try {
-            stepActionProvidersHolder.getActionProvider(step).compensate(saga);
+            stepActionProvidersHolder.getActionProvider(step).compensate(sagaId, sagaName);
         } catch (Throwable throwable) {
-            log.error("Error compensate saga saga {} step {}", saga, step, throwable);
-            compensatePreviousStep(saga, step);
+            log.error("Error compensate saga {} step {}", sagaId, step, throwable);
+            compensatePreviousStep(sagaId, step);
         }
     }
 
