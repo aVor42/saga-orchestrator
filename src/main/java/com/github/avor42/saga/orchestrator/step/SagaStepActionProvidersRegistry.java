@@ -8,17 +8,17 @@ import java.util.Map;
  * @author Voronkov A
  * @since 10.10.2026
  */
-public abstract class SagaStepActionProvidersHolder<E, S> {
+public abstract class SagaStepActionProvidersRegistry<ID, S> {
 
-    protected final Map<S, SagaStepActionProvider<E, S>> actionsProvidersMap;
+    protected final Map<S, SagaStepActionProvider<ID, S>> actionsProvidersMap;
 
-    public SagaStepActionProvidersHolder(List<SagaStepActionProvider<E, S>> actionsProviders) {
+    public SagaStepActionProvidersRegistry(List<SagaStepActionProvider<ID, S>> actionsProviders) {
         if (actionsProviders == null) {
             throw new IllegalArgumentException("actions must not be null");
         }
 
         actionsProvidersMap = new HashMap<>();
-        for (SagaStepActionProvider<E, S> actionProvider : actionsProviders) {
+        for (SagaStepActionProvider<ID, S> actionProvider : actionsProviders) {
             S supportedStep = actionProvider.supportedStep();
             if (supportedStep == null) {
                 throw new IllegalStateException("Provider " + actionProvider + " has no supported step");
@@ -32,7 +32,7 @@ public abstract class SagaStepActionProvidersHolder<E, S> {
         }
     }
 
-    public SagaStepActionProvider<E, S> getActionProvider(S step) {
+    public SagaStepActionProvider<ID, S> getActionProvider(S step) {
         if (!actionsProvidersMap.containsKey(step)) {
             throw new IllegalArgumentException(String.format("action %s not supported", step));
         }

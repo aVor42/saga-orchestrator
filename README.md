@@ -18,7 +18,7 @@ Code documentation and usage examples will be included in future versions.
     <dependency>
         <groupId>com.github.avor42</groupId>
         <artifactId>saga-orchestrator</artifactId>
-        <version>1.0.0</version>
+        <version>2.0.0</version>
     </dependency>
 </dependencies>
 ```
@@ -34,7 +34,7 @@ repositories {
 }
 
 dependencies {
-    implementation("com.github.avor42:saga-orchestrator:1.0.0")
+    implementation("com.github.avor42:saga-orchestrator:2.0.0")
 }
 ```
 
@@ -48,7 +48,7 @@ repositories {
 }
 
 dependencies {
-    implementation "com.github.avor42:saga-orchestrator:1.0.0"
+    implementation "com.github.avor42:saga-orchestrator:2.0.0"
 }
 ```
 

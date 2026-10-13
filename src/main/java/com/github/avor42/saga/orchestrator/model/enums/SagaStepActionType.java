@@ -5,6 +5,6 @@ package com.github.avor42.saga.orchestrator.model.enums;
  * @since 10.10.2026
  */
 public enum SagaStepActionType {
-    PROCESSING,
+    EXECUTION,
     COMPENSATION
 }
