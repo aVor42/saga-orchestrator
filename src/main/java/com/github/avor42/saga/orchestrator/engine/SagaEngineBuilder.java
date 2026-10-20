@@ -5,80 +5,79 @@ import java.util.function.Consumer;
 
 import com.github.avor42.saga.orchestrator.machine.StepMachine;
 import com.github.avor42.saga.orchestrator.service.SagaService;
-import com.github.avor42.saga.orchestrator.step.SagaStepActionProvidersHolder;
+import com.github.avor42.saga.orchestrator.step.SagaStepActionProvidersRegistry;
 
 /**
  * @author Voronkov A
  * @since 10.10.2026
  */
-public class SagaEngineBuilder<E, S> {
+public class SagaEngineBuilder<ID, S> {
 
-    private StepMachine<S> stepMachine;
-    private SagaService<E, S> sagaService;
-    private SagaStepActionProvidersHolder<E, S> stepActionProvidersHolder;
-    private Consumer<E> finalCompensationHandler;
-    private Consumer<E> finalExecutionHandler;
-    private BiConsumer<E, S> failureCompensationHandler;
-
-    SagaEngineBuilder() {
+    private static void isNotNull(Object obj, String message) {
+        if (obj == null) {
+            throw new IllegalArgumentException(message);
+        }
     }
 
-    public SagaEngine<E, S> build() {
+    public static <_ID, _S> SagaEngineBuilder<_ID, _S> builder(String sagaName, StepMachine<_S> stepMachine, SagaService<_ID, _S> sagaService,
+            SagaStepActionProvidersRegistry<_ID, _S> sagaStepActionProvidersRegistry) {
+        isNotNull(sagaName, "sagaName must not be null");
+        if (sagaName.isBlank()) {
+            throw new IllegalArgumentException("sagaName must not be blank");
+        }
+
         isNotNull(stepMachine, "stepMachine must not be null");
         isNotNull(sagaService, "sagaService must not be null");
-        isNotNull(stepActionProvidersHolder, "stepActionProvidersHolder must not be null");
+        isNotNull(sagaStepActionProvidersRegistry, "sagaStepActionProvidersRegistry must not be null");
+        return new SagaEngineBuilder<>(sagaName, stepMachine, sagaService, sagaStepActionProvidersRegistry);
+    }
 
-        SagaEngine<E, S> sagaEngine = new SagaEngine<>(stepMachine, sagaService, stepActionProvidersHolder);
-        if (finalExecutionHandler != null) {
-            sagaEngine.setFinalExecutionHandler(finalExecutionHandler);
+    private final String sagaName;
+    private final StepMachine<S> stepMachine;
+    private final SagaService<ID, S> sagaService;
+    private final SagaStepActionProvidersRegistry<ID, S> sagaStepActionProvidersRegistry;
+    private Consumer<ID> sagaCompletedHandler;
+    private Consumer<ID> sagaCompensationCompletedHandler;
+    private BiConsumer<ID, S> compensationFailureHandler;
+
+    private SagaEngineBuilder(String sagaName, StepMachine<S> stepMachine, SagaService<ID, S> sagaService,
+            SagaStepActionProvidersRegistry<ID, S> sagaStepActionProvidersRegistry) {
+        this.sagaName = sagaName;
+        this.stepMachine = stepMachine;
+        this.sagaService = sagaService;
+        this.sagaStepActionProvidersRegistry = sagaStepActionProvidersRegistry;
+    }
+
+    public SagaEngine<ID, S> build() {
+        SagaEngine<ID, S> sagaEngine = new SagaEngine<>(sagaName, stepMachine, sagaService, sagaStepActionProvidersRegistry);
+        if (sagaCompletedHandler != null) {
+            sagaEngine.setSagaCompletedHandler(sagaCompletedHandler);
         }
 
-        if (finalCompensationHandler != null) {
-            sagaEngine.setFinalCompensationHandler(finalCompensationHandler);
+        if (sagaCompensationCompletedHandler != null) {
+            sagaEngine.setSagaCompensationCompletedHandler(sagaCompensationCompletedHandler);
         }
 
-        if (failureCompensationHandler != null) {
-            sagaEngine.setFailureCompensationHandler(failureCompensationHandler);
+        if (compensationFailureHandler != null) {
+            sagaEngine.setCompensationFailureHandler(compensationFailureHandler);
         }
 
         return sagaEngine;
     }
 
-    public SagaEngineBuilder<E, S> setStepMachine(StepMachine<S> stepMachine) {
-        this.stepMachine = stepMachine;
+    public SagaEngineBuilder<ID, S> setSagaCompletedHandler(Consumer<ID> sagaCompletedHandler) {
+        this.sagaCompletedHandler = sagaCompletedHandler;
         return this;
     }
 
-    public SagaEngineBuilder<E, S> setSagaService(SagaService<E, S> sagaService) {
-        this.sagaService = sagaService;
+    public SagaEngineBuilder<ID, S> setSagaCompensationCompletedHandler(Consumer<ID> sagaCompensationCompletedHandler) {
+        this.sagaCompensationCompletedHandler = sagaCompensationCompletedHandler;
         return this;
     }
 
-    public SagaEngineBuilder<E, S> setStepActionProvidersHolder(
-            SagaStepActionProvidersHolder<E, S> stepActionProvidersHolder) {
-        this.stepActionProvidersHolder = stepActionProvidersHolder;
+    public SagaEngineBuilder<ID, S> setCompensationFailureHandler(BiConsumer<ID, S> compensationFailureHandler) {
+        this.compensationFailureHandler = compensationFailureHandler;
         return this;
-    }
-
-    public SagaEngineBuilder<E, S> setFinalCompensationHandler(Consumer<E> finalCompensationHandler) {
-        this.finalCompensationHandler = finalCompensationHandler;
-        return this;
-    }
-
-    public SagaEngineBuilder<E, S> setFinalExecutionHandler(Consumer<E> finalExecutionHandler) {
-        this.finalExecutionHandler = finalExecutionHandler;
-        return this;
-    }
-
-    public SagaEngineBuilder<E, S> setFailureCompensationHandler(BiConsumer<E, S> failureCompensationHandler) {
-        this.failureCompensationHandler = failureCompensationHandler;
-        return this;
-    }
-
-    private void isNotNull(Object obj, String message) {
-        if (obj == null) {
-            throw new IllegalStateException(message);
-        }
     }
 
 }

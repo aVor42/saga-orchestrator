@@ -7,30 +7,38 @@ import com.github.avor42.saga.orchestrator.model.enums.SagaStepActionType;
  * @author Voronkov A
  * @since 10.10.2026
  */
-public abstract class SagaStepActionProvider<E, S> {
+public abstract class SagaStepActionProvider<ID, S> {
 
     public abstract S supportedStep();
 
-    public void process(E saga) {
-        if (saga == null) {
-            throw new IllegalArgumentException("Saga cannot be null");
+    public void execute(ID sagaId, String sagaName) {
+        if (sagaId == null) {
+            throw new IllegalArgumentException("sagaId cannot be null");
         }
 
-        SagaStepAction<E, S> sagaStepAction = new SagaStepAction<>(saga, supportedStep(), SagaStepActionType.PROCESSING);
-        ensureAndSendProcessing(sagaStepAction);
+        if (sagaName == null || sagaName.isBlank()) {
+            throw new IllegalArgumentException("sagaName cannot be empty");
+        }
+
+        SagaStepAction<ID, S> sagaStepAction = new SagaStepAction<>(sagaId, sagaName, supportedStep(), SagaStepActionType.EXECUTION);
+        ensureAndSendExecution(sagaStepAction);
     }
 
-    public void compensate(E saga) {
-        if (saga == null) {
-            throw new IllegalArgumentException("Saga cannot be null");
+    public void compensate(ID sagaId, String sagaName) {
+        if (sagaId == null) {
+            throw new IllegalArgumentException("sagaId cannot be null");
         }
 
-        SagaStepAction<E, S> sagaStepAction = new SagaStepAction<>(saga, supportedStep(), SagaStepActionType.COMPENSATION);
+        if (sagaName == null || sagaName.isBlank()) {
+            throw new IllegalArgumentException("sagaName cannot be empty");
+        }
+
+        SagaStepAction<ID, S> sagaStepAction = new SagaStepAction<>(sagaId, sagaName, supportedStep(), SagaStepActionType.COMPENSATION);
         ensureAndSendCompensation(sagaStepAction);
     }
 
-    protected abstract void ensureAndSendProcessing(SagaStepAction<E, S> sagaStepAction);
+    protected abstract void ensureAndSendExecution(SagaStepAction<ID, S> sagaStepAction);
 
-    protected abstract void ensureAndSendCompensation(SagaStepAction<E, S> sagaStepAction);
+    protected abstract void ensureAndSendCompensation(SagaStepAction<ID, S> sagaStepAction);
 
 }
